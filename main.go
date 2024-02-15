@@ -4,25 +4,27 @@ import(
 	"fmt"
 	"strings"
 	"github.com/xuri/excelize/v2"
+	"encoding/json"
+	"os"
+	"io/ioutil"
 )
 
 type Meal struct {
-	day   string
-	date  string
-	meal  string
-	items []string
+	Day   string   `json:"day"`
+	Date  string   `json:"date"`
+	Meal  string   `json:"meal"`
+	Items []string `json:"items"`
 }
 
-func (m *Meal) PrintDetails() {
-	fmt.Println("DAY: " + m.day)
-	fmt.Println("Date: " + m.date)
-	fmt.Println("Meal: " + m.meal)
-	fmt.Printf("Items: %v", m.items)
+func (m *Meal) print_details() {
+	fmt.Printf("Day: %v\n", m.Day)
+	fmt.Printf("Date: %v\n", m.Date)
+	fmt.Printf("Meal: %v\n", m.Meal)
+	fmt.Printf("Items: %v\n", strings.Join(m.Items, ", "))
 	fmt.Println()
 }
 
 func get_items(file,day,meal string) ([]string,error) {
-	
 	f,err := excelize.OpenFile(file)
 	if err != nil { 
 		return nil,err
@@ -117,7 +119,7 @@ func get_number_of_items(file,day,meal string) (int,error) {
 }
 
 func is_item_in_meal(file,day,meal,item string) (bool,error) {
-	
+
 	f,err := excelize.OpenFile(file)
 	if err != nil { 
 		return false,err
@@ -161,26 +163,111 @@ func is_item_in_meal(file,day,meal,item string) (bool,error) {
 	return false, nil
 }
 
+func convert_to_json(file string, choice string) ([]map[string]interface{}){
+	f, err := excelize.OpenFile("Sample-Menu.xlsx")
+    if err != nil {
+        fmt.Println(err)
+    }
+	defer func() {
+        if err := f.Close(); err != nil {
+            fmt.Println(err)
+        }
+    }()
+
+    cols, err := f.GetCols("Sheet1")
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    var jsonData []map[string]interface{}
+
+	meals := [3]string{"BREAKFAST", "LUNCH", "DINNER"}
+
+	for _, col := range cols{
+		
+		mealNum := 0
+		row := 3
+		for i:=0;i<3;i++{
+			var items []string
+			for ;row < len(col); row++{
+				if col[row] != "" {
+					if col[row] == col[0] {
+						row = row+2;
+						break
+					}
+
+					items = append(items, col[row])
+				}
+			}
+			jsonData = append(jsonData, map[string]interface{}{
+					"day": col[0],
+					"date": col[1],
+					"meal": meals[mealNum],
+					"items": items,
+				},
+			)
+			mealNum++;
+		}
+	}
+
+	if choice == "create_file" {
+		jsonFile, err := os.Create("mess_menu.json")
+		if err != nil {
+			fmt.Println(err)
+			return jsonData
+		}
+		defer func() {
+			if err := jsonFile.Close(); err != nil {
+				fmt.Println(err)
+			}
+		}()
+
+		encoder := json.NewEncoder(jsonFile)
+		if err := encoder.Encode(jsonData); err != nil {
+			fmt.Println(err)
+			return jsonData
+		}
+
+		fmt.Println("The json file has been created with the name of mess_menu.json in the current working folder.")
+	}
+	return jsonData
+}
+
+func create_structs()([]Meal){
+	var meals []Meal
+	data, err := ioutil.ReadFile("mess_menu.json")
+	if err != nil {
+		fmt.Println("Error reading JSON file:", err)
+		return meals
+	}
+
+	err = json.Unmarshal(data, &meals)
+	if err != nil {
+		fmt.Println("Error unmarshaling JSON:", err)
+		return meals
+	}
+
+	return meals
+}
+
 func main(){
 	file := "Sample-Menu.xlsx"
 
-	choice := 0
-	for {
+	choice := -1
+	for choice != 0{
 		fmt.Scanln(&choice)
-		fmt.Printf("Type the day of the week: ")
-		var day string
-		fmt.Scanln(&day)
-		day = strings.ToUpper(day)
-		
-		fmt.Printf("Type the meal of the day: ")
-		var meal string
-		fmt.Scanln(&meal)
-		meal = strings.ToUpper(meal)
+		var day,meal string
+		if choice > 0 && choice < 4{
+			fmt.Printf("Type the day of the week: ")
+			fmt.Scanln(&day)
+			day = strings.ToUpper(day)
+			
+			fmt.Printf("Type the meal of the day: ")
+			fmt.Scanln(&meal)
+			meal = strings.ToUpper(meal)
+		}
 		
 		switch choice {
-			case 0:
-				fmt.Println("You have terminated the program!")
-				return
 			case 1:
 				items, err := get_items(file, day, meal)
 				if err != nil {
@@ -209,8 +296,18 @@ func main(){
 				} else {
 					fmt.Printf("No")
 				}
+			case 4:
+				_ = convert_to_json(file, "create_file")
+			case 5:
+				meals := create_structs()
+
+				for _,meal := range meals{
+					meal.print_details()
+				}
 			default:
 				fmt.Println("Please enter a valid choice.")
 		}
 	}
+	fmt.Println("You have terminated the program!")
+
 }
