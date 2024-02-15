@@ -41,21 +41,29 @@ func get_items(file,day,meal string) ([]string,error) {
 		return nil,err
 	}
 
-	colNum := 0
+	colNum := -1
 	for i := 0; i<7; i++{
 		if rows[0][i] == day {
 			colNum = i
 			break
 		}
 	}
+	if colNum == -1{
+		fmt.Println("Please enter a valid date.")
+		return nil, nil
+	}
 
-	mealRow := 0
+	mealRow := -1
 	for i,row := range rows {
 		cellValue := row[colNum]
 		if cellValue == meal{
 			mealRow = i
 			break
 		} 
+	}
+	if mealRow == -1{
+		fmt.Println("Please enter a valid meal.")
+		return nil, nil
 	}
 
 	var items []string
@@ -89,21 +97,29 @@ func get_number_of_items(file,day,meal string) (int,error) {
 		return 0,err
 	}
 
-	colNum := 0
+	colNum := -1
 	for i := 0; i<7; i++{
 		if rows[0][i] == day {
 			colNum = i
 			break
 		}
 	}
+	if colNum == -1{
+		fmt.Println("Please enter a valid date.")
+		return 0, nil
+	}
 
-	mealRow := 0
+	mealRow := -1
 	for i,row := range rows {
 		cellValue := row[colNum]
 		if cellValue == meal{
 			mealRow = i
 			break
 		} 
+	}
+	if mealRow == -1{
+		fmt.Println("Please enter a valid date.")
+		return 0, nil
 	}
 
 	num := 0
@@ -136,21 +152,29 @@ func is_item_in_meal(file,day,meal,item string) (bool,error) {
 		return false,err
 	}
 
-	colNum := 0
+	colNum := -1
 	for i := 0; i<7; i++{
 		if rows[0][i] == day {
 			colNum = i
 			break
 		}
 	}
+	if colNum == -1{
+		fmt.Println("Please enter a valid date.")
+		return false, nil
+	}
 
-	mealRow := 0
+	mealRow := -1
 	for i,row := range rows {
 		cellValue := row[colNum]
 		if cellValue == meal{
 			mealRow = i
 			break
 		} 
+	}
+	if mealRow == -1{
+		fmt.Println("Please enter a valid date.")
+		return false, nil
 	}
 
 	for i := mealRow + 1;i < len(rows); i++ {
@@ -256,6 +280,7 @@ func main(){
 	choice := -1
 	for choice != 0{
 		fmt.Scanln(&choice)
+
 		var day,meal string
 		if choice > 0 && choice < 4{
 			fmt.Printf("Type the day of the week: ")
@@ -266,6 +291,7 @@ func main(){
 			fmt.Scanln(&meal)
 			meal = strings.ToUpper(meal)
 		}
+
 		
 		switch choice {
 			case 1:
@@ -282,20 +308,28 @@ func main(){
 					fmt.Println(err)
 				}
 				if itemNum == 0{
-					println("some error occurred!")
+					println("")
 				} else{
 					fmt.Println(itemNum)
 				}
 			case 3:
-				item := ""
-				fmt.Printf("Typoe the item you want to check: ")
-				fmt.Scanln(&item)
+				var item string
+				fmt.Printf("Type the item you want to check: ")
+				_, err := fmt.Scanf("%q", &item)
+				if err != nil {
+					fmt.Println("Error reading input:", err)
+					break
+				}
+
+				item = strings.ToUpper(item)
 				is, err := is_item_in_meal(file, day, meal, item)
 				if err == nil && is {
-					fmt.Printf("Yes")
+					fmt.Println("Yes")
 				} else {
-					fmt.Printf("No")
+					fmt.Println("No")
 				}
+				fmt.Scanln()
+				break
 			case 4:
 				_ = convert_to_json(file, "create_file")
 			case 5:
